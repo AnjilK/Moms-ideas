@@ -88,6 +88,20 @@ def button(text, data):
     return {"text": text, "callback_data": data}
 
 
+def safe_answer_callback(api, callback_id, text=None):
+    try:
+        api.answer_callback_query(callback_id, text)
+    except RuntimeError as error:
+        print(f"Telegram callback acknowledgement skipped: {error}")
+
+
+def safe_edit_message_text(api, chat_id, message_id, text, reply_markup=None):
+    try:
+        api.edit_message_text(chat_id, message_id, text, reply_markup)
+    except RuntimeError as error:
+        print(f"Telegram message edit skipped: {error}")
+
+
 def category_keyboard(item_id):
     rows = []
     for index, category in enumerate(CATEGORIES):
@@ -181,7 +195,7 @@ def handle_callback(api, store, allowed_users, callback):
     user = callback.get("from") or {}
     user_id = user.get("id")
     if user_id not in allowed_users:
-        api.answer_callback_query(callback["id"])
+        safe_answer_callback(api, callback["id"])
         return
 
     message = callback["message"]
@@ -190,31 +204,31 @@ def handle_callback(api, store, allowed_users, callback):
     parts = callback.get("data", "").split(":")
 
     if len(parts) != 3:
-        api.answer_callback_query(callback["id"], "I could not understand that button.")
+        safe_answer_callback(api, callback["id"], "I could not understand that button.")
         return
 
     action, item_id, value = parts
     item = store.get(item_id)
     if not item:
-        api.answer_callback_query(callback["id"], "That note was not found.")
+        safe_answer_callback(api, callback["id"], "That note was not found.")
         return
 
     if action == "cat":
         try:
             category = CATEGORIES[int(value)]
         except (ValueError, IndexError):
-            api.answer_callback_query(callback["id"], "Unknown category")
+            safe_answer_callback(api, callback["id"], "Unknown category")
             return
-        api.answer_callback_query(callback["id"], "Category selected")
         store.set_category(item_id, category)
+        store.set_mode(item_id, "publish")
         item = store.get(item_id)
-        api.edit_message_text(
+        safe_answer_callback(api, callback["id"], "Category selected")
+        safe_edit_message_text(
+            api,
             chat_id,
             message_id,
             f"Saved this note.\n\nTitle: {item['title']}\nCategory: {category}\n\nSelected category: {category}",
         )
-        store.set_mode(item_id, "publish")
-        item = store.get(item_id)
         api.send_message(
             chat_id,
             "Where should we publish it?",
@@ -223,15 +237,15 @@ def handle_callback(api, store, allowed_users, callback):
         return
 
     if action == "mode":
-        api.answer_callback_query(callback["id"], "This step is no longer needed.")
-        api.edit_message_text(chat_id, message_id, "This step is no longer needed. Please send the note again if you want to publish it.")
+        safe_answer_callback(api, callback["id"], "This step is no longer needed.")
+        safe_edit_message_text(api, chat_id, message_id, "This step is no longer needed. Please send the note again if you want to publish it.")
         return
 
     if action == "dest":
-        api.answer_callback_query(callback["id"], "Website selected")
+        safe_answer_callback(api, callback["id"], "Website selected")
         store.toggle(item_id, value)
         store.finish_selection(item_id)
-        api.edit_message_text(chat_id, message_id, "Selected destination: Website")
+        safe_edit_message_text(api, chat_id, message_id, "Selected destination: Website")
         api.send_message(
             chat_id,
             "Website selected. The note is queued for preparation.\n\n"
@@ -240,15 +254,15 @@ def handle_callback(api, store, allowed_users, callback):
         return
 
     if action == "approve":
-        api.answer_callback_query(callback["id"], "Review is no longer used.")
-        api.edit_message_text(chat_id, message_id, "Review is no longer used. New notes publish after category and destination are selected.")
+        safe_answer_callback(api, callback["id"], "Review is no longer used.")
+        safe_edit_message_text(api, chat_id, message_id, "Review is no longer used. New notes publish after category and destination are selected.")
         return
 
     if action == "later":
-        api.answer_callback_query(callback["id"], f"{value} is not connected yet.")
+        safe_answer_callback(api, callback["id"], f"{value} is not connected yet.")
         return
 
-    api.answer_callback_query(callback["id"], "I could not understand that button.")
+    safe_answer_callback(api, callback["id"], "I could not understand that button.")
 
 
 def deliver_notices(api, store, base_url):
@@ -295,7 +309,8 @@ def main():
 
     api = Telegram(config.telegram_token)
     store = Store(config.data_dir)
-    offset = None
+    updates = api.get_updates(timeout=1)
+    offset = updates[-1]["update_id"] + 1 if updates else None
     last_notice_check = 0
 
     print("Telegram bot is listening. Press Ctrl+C to stop.")
