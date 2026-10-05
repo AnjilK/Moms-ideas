@@ -32,6 +32,7 @@ class Config:
     fb_page_id: str = field(default_factory=lambda: os.getenv('FACEBOOK_PAGE_ID', ''))
     fb_token: str = field(default_factory=lambda: os.getenv('FACEBOOK_PAGE_TOKEN', ''))
     fb_version: str = field(default_factory=lambda: os.getenv('FACEBOOK_GRAPH_VERSION', ''))
+    auto_deploy_public_site: bool = field(default_factory=lambda: os.getenv('AUTO_DEPLOY_PUBLIC_SITE', '').lower() in ('1', 'true', 'yes', 'on'))
     demo: bool = False
     max_image_bytes: int = 5 * 1024 * 1024
 

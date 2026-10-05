@@ -213,6 +213,14 @@ git push
 
 After the first import, each push to GitHub should trigger a Vercel deployment.
 
+Optional automatic Vercel updates:
+
+```env
+AUTO_DEPLOY_PUBLIC_SITE=1
+```
+
+When this is set in `.env`, the worker will automatically export `public/`, commit the changed public files, and push to GitHub after a website note is published. Vercel then redeploys from GitHub.
+
 ## GitHub
 
 The local repository has been initialized and linked to:

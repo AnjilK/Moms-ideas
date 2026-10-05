@@ -1,6 +1,7 @@
 import time
 
 from .config import Config, load_env
+from .deploy import deploy_public_site
 from .store import CATEGORIES, Store
 
 
@@ -54,12 +55,17 @@ def prepare_item(store, item):
     print(f"Prepared {item['id']} for {category}.")
 
 
-def publish_target(store, target):
+def publish_target(store, target, config):
     item_id = target["item_id"]
     destination = target["destination"]
     if destination == "website":
         store.result(item_id, "website", "published", external_id=item_id, url="/post/" + item_id)
         print(f"Published {item_id} to website.")
+        if config.auto_deploy_public_site:
+            try:
+                print(deploy_public_site(store, reason=f"note {item_id}"))
+            except Exception as error:
+                print(f"Automatic Vercel deploy failed for {item_id}: {error}")
         return
     store.result(
         item_id,
@@ -70,7 +76,7 @@ def publish_target(store, target):
     print(f"Skipped {item_id} for {destination}; destination is not connected.")
 
 
-def run_once(store):
+def run_once(store, config):
     did_work = False
     item = store.claim_preparation()
     if item:
@@ -79,7 +85,7 @@ def run_once(store):
 
     target = store.claim_publication()
     if target:
-        publish_target(store, target)
+        publish_target(store, target, config)
         did_work = True
 
     return did_work
@@ -93,7 +99,7 @@ def main():
     store.recover()
     print("Mom's Ideas worker is running. Press Ctrl+C to stop.")
     while True:
-        if not run_once(store):
+        if not run_once(store, config):
             time.sleep(2)
 
 
