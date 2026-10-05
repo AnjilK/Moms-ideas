@@ -109,6 +109,13 @@ def category_keyboard(item_id):
     return inline_keyboard(rows)
 
 
+def category_destination_keyboard(item_id):
+    rows = []
+    for index, category in enumerate(CATEGORIES):
+        rows.append([button(f"{category} -> Website", f"catdest:{item_id}:{index}:website")])
+    return inline_keyboard(rows)
+
+
 def destination_keyboard(item):
     item_id = item["id"]
     return inline_keyboard([
@@ -186,8 +193,8 @@ def handle_message(api, store, allowed_users, message):
         f"Title: {item['title']}\n"
         f"Category: {item['category']}"
         f"{image_line}\n\n"
-        "Choose a category.",
-        category_keyboard(item["id"]),
+        "Choose a category and publish destination.",
+        category_destination_keyboard(item["id"]),
     )
 
 
@@ -203,11 +210,11 @@ def handle_callback(api, store, allowed_users, callback):
     message_id = message["message_id"]
     parts = callback.get("data", "").split(":")
 
-    if len(parts) != 3:
+    if len(parts) not in (3, 4):
         safe_answer_callback(api, callback["id"], "I could not understand that button.")
         return
 
-    action, item_id, value = parts
+    action, item_id, value = parts[:3]
     item = store.get(item_id)
     if not item:
         safe_answer_callback(api, callback["id"], "That note was not found.")
@@ -233,6 +240,37 @@ def handle_callback(api, store, allowed_users, callback):
             chat_id,
             "Where should we publish it?",
             destination_keyboard(item),
+        )
+        return
+
+    if action == "catdest":
+        destination = parts[3]
+        try:
+            category = CATEGORIES[int(value)]
+        except (ValueError, IndexError):
+            safe_answer_callback(api, callback["id"], "Unknown category")
+            return
+        if destination != "website":
+            safe_answer_callback(api, callback["id"], "That destination is not connected yet.")
+            return
+        store.set_category(item_id, category)
+        store.set_mode(item_id, "publish")
+        item = store.get(item_id)
+        if "website" not in item["selected"]:
+            store.toggle(item_id, "website")
+        queued = store.finish_selection(item_id)
+        safe_answer_callback(api, callback["id"], "Website selected")
+        safe_edit_message_text(
+            api,
+            chat_id,
+            message_id,
+            f"Selected: {category} -> Website",
+        )
+        api.send_message(
+            chat_id,
+            "Website selected. The note is queued for preparation."
+            if queued else
+            "Website was already selected for this note.",
         )
         return
 
