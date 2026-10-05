@@ -10,9 +10,9 @@ A local-first publishing system for turning Mom's finished notes into a simple w
 - Individual post pages.
 - Telegram bot intake for text, photos, and photos with captions.
 - Telegram category buttons before publishing.
-- Telegram **Publish** / **Review** flow.
+- Telegram category and destination selection flow.
 - Telegram website destination selection.
-- Review mode with a private preview link and **Approve Website** button.
+- Automatic website preparation after category and destination are selected.
 - A background worker that prepares queued notes and publishes website posts.
 - Saved Telegram images display on post pages and as homepage thumbnails.
 - A local publishing form at `/admin`.
@@ -78,28 +78,10 @@ Open /admin
 Send text, photo, or photo with caption to Telegram bot
   -> bot saves original text/image into SQLite and data/images
   -> bot asks for category
-  -> bot asks Publish or Review
   -> bot asks destination
   -> choose Website
-```
-
-Publish mode:
-
-```text
-Website selected
   -> worker prepares the note
   -> worker marks website target published
-  -> bot sends published local link
-```
-
-Review mode:
-
-```text
-Website selected
-  -> worker prepares draft
-  -> bot sends private /preview/<token> link
-  -> tap Approve Website
-  -> worker publishes
   -> bot sends published local link
 ```
 
@@ -123,7 +105,7 @@ It stores:
 - image file paths when images are added later
 - whether the website destination is `draft`, `queued`, `published`, `failed`, or `unknown`
 - future publish status for Facebook and X
-- events and notices for retries or review
+- events and notices for retries and results
 
 Images should be stored as files, not inside SQLite. SQLite should store the local image path, for example:
 

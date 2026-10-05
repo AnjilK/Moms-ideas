@@ -6,11 +6,10 @@ Snapshot date: 5 October 2026. Requested destination: Spaces. Spaces could not b
 
 - Mom sends text, one image, or an image with a caption to Telegram.
 - The bot saves text and Telegram photos locally.
-- The bot asks for category first, then asks **Publish** or **Review**, then asks destination.
+- The bot asks for category first, then asks destination.
 - Current active destination: website.
 - Facebook and X are visible as "later" placeholders only.
-- Publish mode queues and publishes to the local website.
-- Review mode sends a private preview link and an **Approve Website** Telegram button.
+- Website selection queues and publishes to the local website.
 - Retain successful publications; retry failures without reposting successes.
 - Preserve originals. No OCR, transcription, scheduling, or additional networks in v1.
 - Telegram button taps now edit the selected message to make choices visible. Telegram does not allow custom button colours.
@@ -34,10 +33,9 @@ Snapshot date: 5 October 2026. Requested destination: Spaces. Spaces could not b
 - Telegram text notes are saved into SQLite.
 - Telegram photos are downloaded to `data/images/` and linked from SQLite.
 - Telegram category buttons are implemented using the categories from `momideas.store.CATEGORIES`.
-- Telegram **Publish** and **Review** buttons are implemented.
+- Telegram category and destination buttons are implemented.
 - Website destination selection is implemented.
-- Review approval via Telegram **Approve Website** button is implemented.
-- Private review previews are available at `/preview/<preview_token>`.
+- Private review previews remain available at `/preview/<preview_token>`, but the active Telegram flow no longer asks for review.
 - Saved images are served through `/image/<item_id>`.
 - Post pages display saved images.
 - Homepage cards show image thumbnails when a note has an image.
@@ -70,7 +68,6 @@ Open /admin
 Telegram text/photo/caption
   -> bot saves item and optional image
   -> choose category
-  -> choose Publish or Review
   -> choose Website
 ```
 
@@ -83,20 +80,6 @@ Website selected
   -> website target becomes queued
   -> worker publishes website target
   -> target status becomes published
-  -> bot sends local /post/<id> link
-```
-
-Review:
-
-```text
-Website selected
-  -> item phase becomes preparing
-  -> worker prepares item
-  -> website target remains draft
-  -> bot sends /preview/<token> link
-  -> user taps Approve Website
-  -> target becomes queued
-  -> worker publishes website target
   -> bot sends local /post/<id> link
 ```
 

@@ -88,12 +88,6 @@ def button(text, data):
     return {"text": text, "callback_data": data}
 
 
-def mode_keyboard(item_id):
-    return inline_keyboard([
-        [button("Publish", f"mode:{item_id}:publish"), button("Review", f"mode:{item_id}:review")],
-    ])
-
-
 def category_keyboard(item_id):
     rows = []
     for index, category in enumerate(CATEGORIES):
@@ -219,23 +213,18 @@ def handle_callback(api, store, allowed_users, callback):
             message_id,
             f"Saved this note.\n\nTitle: {item['title']}\nCategory: {category}\n\nSelected category: {category}",
         )
+        store.set_mode(item_id, "publish")
+        item = store.get(item_id)
         api.send_message(
             chat_id,
-            "What should we do with it?",
-            mode_keyboard(item["id"]),
+            "Where should we publish it?",
+            destination_keyboard(item),
         )
         return
 
     if action == "mode":
-        api.answer_callback_query(callback["id"], value.title())
-        store.set_mode(item_id, value)
-        item = store.get(item_id)
-        api.edit_message_text(chat_id, message_id, f"Selected: {value.title()}")
-        api.send_message(
-            chat_id,
-            "Choose a destination.",
-            destination_keyboard(item),
-        )
+        api.answer_callback_query(callback["id"], "This step is no longer needed.")
+        api.edit_message_text(chat_id, message_id, "This step is no longer needed. Please send the note again if you want to publish it.")
         return
 
     if action == "dest":
@@ -251,13 +240,8 @@ def handle_callback(api, store, allowed_users, callback):
         return
 
     if action == "approve":
-        api.answer_callback_query(callback["id"], "Approving")
-        approved = store.approve(item_id, value)
-        api.edit_message_text(chat_id, message_id, "Approved: Website" if approved else "Nothing to approve.")
-        if approved:
-            api.send_message(chat_id, "Approved. The worker will publish it to the website.")
-        else:
-            api.send_message(chat_id, "This destination was not waiting for approval.")
+        api.answer_callback_query(callback["id"], "Review is no longer used.")
+        api.edit_message_text(chat_id, message_id, "Review is no longer used. New notes publish after category and destination are selected.")
         return
 
     if action == "later":
